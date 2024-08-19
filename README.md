@@ -1,7 +1,15 @@
-Project Name
+DST_RVL_CDIP
 ==============================
 
-This repo is a Starting Pack for DS projects. You can rearrange the structure to make it fits your project.
+installation du projet
+
+python3 -m venv env_RVL_CDIP
+
+source env_RVL_CDIP/bin/activate
+
+pip install -r requirements.txt
+
+
 
 Project Organization
 ------------
