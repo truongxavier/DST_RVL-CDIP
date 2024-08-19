@@ -20,6 +20,8 @@ matplotlib
 
 seaborn
 
+opencv-python
+
 
 Project Organization
 ------------
