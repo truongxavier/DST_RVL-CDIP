@@ -22,4 +22,4 @@ df.head()
 
 plt.figure(figsize = (8,5))
 
-plt.imshow(df['image'].iloc[0], cmap='gray')
+plt.imshow(df['image'].iloc[1], cmap='gray')
