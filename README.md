@@ -58,6 +58,14 @@ Project Organization
     │   ├── visualization  <- Scripts to create exploratory and results oriented visualizations
     │   │   └── visualize.py
 
+Description des datas
+------------
+lien des datas : https://adamharley.com/rvl-cdip/
+
+projets existants sur ces datas : https://paperswithcode.com/sota/document-image-classification-on-rvl-cdip
+
+
+
 --------
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
