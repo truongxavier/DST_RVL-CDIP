@@ -13,8 +13,11 @@ pip install -r requirements.txt
 Description des imports
 ------------
 pandas numpy
+
 scikit-learn
+
 matplotlib
+
 seaborn
 
 
