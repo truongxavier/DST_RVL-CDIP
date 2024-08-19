@@ -64,7 +64,7 @@ lien des datas : https://adamharley.com/rvl-cdip/
 
 projets existants sur ces datas : https://paperswithcode.com/sota/document-image-classification-on-rvl-cdip
 
-
+![RVL_CDIP](https://github.com/user-attachments/assets/c6b260cf-418d-4f9d-9ba8-ffac4b8f37b4)
 
 --------
 
