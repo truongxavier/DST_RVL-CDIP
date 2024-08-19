@@ -18,8 +18,11 @@ def read_image(file_path):
         return None
 
 df['image'] = df['image_chemin'].apply(read_image)
+df['shape'] = df['image'].apply(lambda x: x.shape if x is not None else None)
 df.head()
 
 plt.figure(figsize = (8,5))
 
 plt.imshow(df['image'].iloc[1], cmap='gray')
+
+df.head()
