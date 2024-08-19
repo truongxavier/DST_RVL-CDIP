@@ -2,6 +2,7 @@ DST_RVL_CDIP
 ==============================
 
 installation du projet
+------------
 
 python3 -m venv env_RVL_CDIP
 
@@ -9,6 +10,12 @@ source env_RVL_CDIP/bin/activate
 
 pip install -r requirements.txt
 
+Description des imports
+------------
+pandas numpy
+scikit-learn
+matplotlib
+seaborn
 
 
 Project Organization
