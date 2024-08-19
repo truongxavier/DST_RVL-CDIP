@@ -22,6 +22,8 @@ seaborn
 
 opencv-python
 
+tesseract-ocr
+
 
 Project Organization
 ------------
