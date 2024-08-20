@@ -5,6 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 import os
 import pytesseract
+from PIL import UnidentifiedImageError
 
 # Spécifiez le chemin de Tesseract si nécessaire
 pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # Remplacez par le chemin correct si nécessaire
