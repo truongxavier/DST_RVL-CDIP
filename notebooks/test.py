@@ -3,9 +3,7 @@ import pandas as pd
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import os
-import pytesseract
-import ast
+import base64
 
 
 
@@ -16,14 +14,22 @@ chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
 chemin_results = '/mnt/d/DVPT/DST/results/'
 
 # Lire le fichier de labels en utilisant dask
-df = pd.read_csv(chemin_results + 'processed_data_test1.csv')
+df = pd.read_csv(chemin_results + 'processed_batch_0.csv')
 plt.figure(figsize = (8,5))
+
+def deserialize_image(image_str):
+    image_data = base64.b64decode(image_str)
+    np_arr = np.frombuffer(image_data, np.uint8)
+    return cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
 
 image_data = df['image'].iloc[1]
 
 if isinstance(image_data, str):
-    # Si l'image est une chaîne de caractères, vous devez la convertir en tableau NumPy
-    image_data = np.array(ast.literal_eval(image_data))
+    try:
+        image_data = deserialize_image(image_data)
+    except ValueError as e:
+        print(f"Erreur de conversion de l'image : {e}")
+        print(f"Chaîne de caractères de l'image : {image_data}")
 
 plt.imshow(image_data, cmap='gray')
 plt.show()

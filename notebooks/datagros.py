@@ -7,6 +7,8 @@ from tqdm import tqdm
 from dask.distributed import Client, LocalCluster, progress
 import logging
 import ipywidgets as widgets
+import numpy as np
+import base64
 
 def main():
     # Configurer les logs détaillés
@@ -41,10 +43,13 @@ def main():
         except (FileNotFoundError, UnidentifiedImageError):
             return np.zeros((1, 1))  # Retourne une image vide si une exception est levée
 
+    def serialize_image(image):
+        _, buffer = cv2.imencode('.png', image)
+        return base64.b64encode(buffer).decode('utf-8')
+
     def process_batch(batch):
-        batch['image'] = batch['image_chemin'].apply(read_image, meta=('image', 'object'))
+        batch['image'] = batch['image_chemin'].apply(read_image)
         batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None)
-        batch['image'] = batch['image'].apply(lambda x: np.array2string(x, separator=',') if x is not None else '')
         return batch
 
     # Repartitionner les données en paquets plus petits pour une meilleure parallélisation
@@ -71,6 +76,7 @@ def main():
             result = dd.compute(future)[0]
             end_time = time.time()
             processing_time = end_time - start_time
+            result['image'] = result['image'].apply(lambda x: x if x is not None else np.zeros((1, 1)))
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
             logging.info(f"Batch {i} traité et sauvegardé. Temps de traitement : {round(processing_time,2)} secondes")
             estimated_remaining_time = round((processing_time * (df.npartitions - i - 1)) / 60, 2)
