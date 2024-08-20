@@ -42,7 +42,14 @@ def main():
 
     # Repartitionner les données en paquets plus petits pour une meilleure parallélisation
     logging.info("Repartitionnement des données")
-    df = df.repartition(partition_size="100")
+    # Calculer le nombre total de lignes
+    total_rows = df.shape[0].compute()
+    logging.info(f"Nombre total de lignes : {total_rows}")
+    # Calculer le nombre de partitions nécessaires pour avoir 100 lignes par partition
+    npartitions = (total_rows // 1000) + (1 if total_rows % 100 != 0 else 0)
+    logging.info(f"Nombre de partitions : {npartitions}")
+    # Repartitionner le DataFrame
+    df = df.repartition(npartitions=npartitions)
 
     # Traiter les données par lots avec une barre de progression
     logging.info("Début du traitement des partitions")
