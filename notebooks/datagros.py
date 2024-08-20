@@ -44,6 +44,7 @@ def main():
     def process_batch(batch):
         batch['image'] = batch['image_chemin'].apply(read_image, meta=('image', 'object'))
         batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None)
+        batch['image'] = batch['image'].apply(lambda x: np.array2string(x, separator=',') if x is not None else '')
         return batch
 
     # Repartitionner les données en paquets plus petits pour une meilleure parallélisation
