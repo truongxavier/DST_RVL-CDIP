@@ -67,7 +67,7 @@ def main():
             processing_time = end_time - start_time
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
             logging.info(f"Batch {i} traité et sauvegardé. Temps de traitement : {processing_time} secondes")
-            estimated_remaining_time = (processing_time * (df.npartitions - i - 1)) / 60
+            estimated_remaining_time = round((processing_time * (df.npartitions - i - 1)) / 60, 2)
             logging.info(f"Temps de traitement restant estimé : {estimated_remaining_time} minutes")
 
     # Afficher la progression des tâches
