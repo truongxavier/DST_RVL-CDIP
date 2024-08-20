@@ -55,7 +55,8 @@ def main():
             future.add_done_callback(update_pbar)
             result = dd.compute(future)[0]
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
-            logging.info(f"Batch {i} traité et sauvegardé par le worker {client.scheduler_info()['workers'][0]['name']}")
+            worker_names = [str(worker['name']) for worker in client.scheduler_info()['workers'].values()]
+            logging.info(f"Batch {i} traité et sauvegardé par les workers {', '.join(worker_names)}")
 
     # Afficher la progression des tâches
     progress(futures)
