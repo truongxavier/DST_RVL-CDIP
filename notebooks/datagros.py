@@ -60,10 +60,14 @@ def main():
         futures = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'image': 'object', 'shape': 'object'}).to_delayed()
         for i, future in enumerate(futures):
             future.add_done_callback(update_pbar)
+            start_time = time.time()
             result = dd.compute(future)[0]
+            end_time = time.time()
+            processing_time = end_time - start_time
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
-            worker_names = [str(worker['name']) for worker in client.scheduler_info()['workers'].values()]
-            logging.info(f"Batch {i} traité et sauvegardé par les workers {', '.join(worker_names)}")
+            logging.info(f"Batch {i} traité et sauvegardé. Temps de traitement : {processing_time} secondes")
+            estimated_remaining_time = (processing_time * (df.npartitions - i - 1)) / 60
+            logging.info(f"Temps de traitement restant estimé : {estimated_remaining_time} minutes")
 
     # Afficher la progression des tâches
     progress(futures)
