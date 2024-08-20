@@ -1,69 +1,93 @@
 import dask.dataframe as dd
-import dask.array as da
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import os
-import pytesseract
 from PIL import UnidentifiedImageError
+from tqdm import tqdm
+from dask.distributed import Client, LocalCluster, progress
+import logging
 
-# Spécifiez le chemin de Tesseract si nécessaire
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # Remplacez par le chemin correct si nécessaire
+def main():
+    # Configurer les logs détaillés
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        handlers=[
+                            logging.FileHandler("dask_processing.log"),
+                            logging.StreamHandler()
+                        ])
 
-chemin_images = '/mnt/d/DVPT/DST/images/'
-chemin_labels = '/mnt/d/DVPT/DST/labels/'
+    # Configurer Dask pour utiliser un cluster local avec plus de ressources
+    cluster = LocalCluster(n_workers=12, threads_per_worker=2, memory_limit='8GB', dashboard_address=':8788')
+    client = Client(cluster)
 
-# Lire le fichier de labels en utilisant dask
-df = dd.read_csv(chemin_labels + 'test.txt', sep=' ', names=['image_chemin', 'label'])
-df['image_chemin'] = chemin_images + df['image_chemin']
+    chemin_images = '/mnt/d/DVPT/DST/images/'
+    chemin_labels = '/mnt/d/DVPT/DST/labels/'
+    chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
+    chemin_results = '/mnt/d/DVPT/DST/results/'
 
-def read_image(file_path):
-    try:
-        return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-    except (FileNotFoundError, UnidentifiedImageError):
-        return None
+    # Lire le fichier de labels en utilisant dask
+    logging.info("Lecture du fichier de labels")
+    df = dd.read_csv(chemin_labels + 'test.txt', sep=' ', names=['image_chemin', 'label'])
+    df['image_chemin'] = chemin_images + df['image_chemin']
 
-def process_batch(batch):
-    batch['image'] = batch['image_chemin'].apply(read_image, meta=('image_chemin', 'object'))
-    batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None, meta=('image', 'object'))
-    return batch
+    def read_image(file_path, *args, **kwargs):
+        try:
+            return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+        except (FileNotFoundError, UnidentifiedImageError):
+            return None
 
-# Traiter les données par lots
-batch_size = 1000  # Ajustez la taille du lot selon votre mémoire disponible
-df = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'image': 'object', 'shape': 'object'})
+    def process_batch(batch):
+        batch['image'] = batch['image_chemin'].apply(read_image, meta=('image', 'object'))
+        batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None)
+        return batch
 
-# Convertir en DataFrame pandas pour les opérations de visualisation
-df = df.compute()
+    # Repartitionner les données en paquets plus petits pour une meilleure parallélisation
+    logging.info("Repartitionnement des données")
+    df = df.repartition(partition_size="100")
 
-# Visualisation
-plt.figure(figsize=(8, 5))
-plt.imshow(df['image'].iloc[1], cmap='gray')
-plt.show()
+    # Traiter les données par lots avec une barre de progression
+    logging.info("Début du traitement des partitions")
+    with tqdm(total=df.npartitions, desc="Processing Partitions") as pbar:
+        def update_pbar(future):
+            pbar.update()
 
-df['label'].value_counts().head(15).plot(kind='bar')
-plt.xlabel('Label')
-plt.ylabel('Count')
-plt.title('Distribution of Labels')
-plt.savefig('distribution_labels.png')
-plt.show()
+        futures = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'image': 'object', 'shape': 'object'}).to_delayed()
+        for i, future in enumerate(futures):
+            future.add_done_callback(update_pbar)
+            result = dd.compute(future)[0]
+            result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
+            logging.info(f"Batch {i} traité et sauvegardé par le worker {client.scheduler_info()['workers'][0]['name']}")
 
-df['shape'].value_counts().plot(kind='bar')
-plt.xlabel('Shape')
-plt.ylabel('Count')
-plt.title('Distribution of Shapes')
-plt.show()
+    # Afficher la progression des tâches
+    progress(futures)
 
-df['image'].apply(lambda x: plt.hist(x.flatten(), bins=256, color='gray', alpha=0.7) if x is not None else None)
-plt.xlabel('Pixel Value')
-plt.ylabel('Frequency')
-plt.title('Pixel Value Distribution')
-plt.show()
+    # Lire les fichiers CSV intermédiaires et les concaténer en un seul DataFrame
+    logging.info("Lecture des fichiers CSV intermédiaires")
+    processed_files = [chemin_datasets + f'processed_batch_{i}.csv' for i in range(len(futures))]
+    df = dd.read_csv(processed_files)
 
-# def ocr_image(image):
-#     if image is not None:
-#         return pytesseract.image_to_string(image)
-#     else:
-#         return None
+    # Convertir en DataFrame pandas pour les opérations de visualisation
+    logging.info("Conversion en DataFrame pandas")
+    df = df.compute()
+    df.to_csv(chemin_results + 'processed_data_test.csv', index=False)
 
-# df['ocr_text'] = df['image'].apply(ocr_image)
-# print(df.head())
+    # Visualisation
+    logging.info("Début de la visualisation")
+    plt.figure(figsize=(8, 5))
+    plt.imshow(df['image'].iloc[1], cmap='gray')
+    plt.show()
+
+    df['label'].value_counts().head(15).plot(kind='bar')
+    plt.xlabel('Label')
+    plt.ylabel('Count')
+    plt.title('Distribution of Labels')
+    plt.savefig('distribution_labels.png')
+    plt.show()
+
+    df['shape'].value_counts().plot(kind='bar')
+    plt.xlabel('Shape')
+    plt.ylabel('Count')
+    plt.title('Distribution of Shapes')
+    plt.show()
+
+if __name__ == '__main__':
+    main()
