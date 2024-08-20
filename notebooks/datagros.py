@@ -33,9 +33,13 @@ def main():
 
     def read_image(file_path, *args, **kwargs):
         try:
-            return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+            image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+            if image is not None:
+                return image
+            else:
+                return np.zeros((1, 1))  # Retourne une image vide si la lecture échoue
         except (FileNotFoundError, UnidentifiedImageError):
-            return None
+            return np.zeros((1, 1))  # Retourne une image vide si une exception est levée
 
     def process_batch(batch):
         batch['image'] = batch['image_chemin'].apply(read_image, meta=('image', 'object'))
