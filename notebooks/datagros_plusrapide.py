@@ -129,4 +129,4 @@ if __name__ == "__main__":
     main()
     end_time = time.time()
     processing_time = end_time - start_time
-    print(f"Temps de traitement total : {round(processing_time, 2)} secondes")
+    print(f"Temps de traitement total : {round(processing_time / 60, 2)} minutes")
