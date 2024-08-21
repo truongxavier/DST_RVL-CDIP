@@ -74,6 +74,7 @@ def main():
     chemin_labels = '/mnt/d/DVPT/projet/labels/'
     chemin_datasets = '/mnt/d/DVPT/projet/datasets/'
     chemin_results = '/mnt/d/DVPT/projet/results/'
+    csv_final = 'final_processed_data.csv'
 
     # Charger le DataFrame
     df = dd.read_csv(chemin_labels + 'test.txt', sep=" ", header=None, names=['image_chemin', 'label'])
@@ -120,9 +121,9 @@ def main():
 
     # Lire les fichiers CSV intermédiaires et les concaténer en un seul DataFrame
     logging.info("Lecture des fichiers CSV intermédiaires")
-    all_files = [os.path.join(chemin_datasets, f) for f in os.listdir(chemin_datasets) if f.startswith('processed_batch_')]
-    df_final = dd.concat([dd.read_csv(file) for file in all_files])
-    df_final.to_csv(chemin_results + 'final_processed_data_rapide.csv', index=False)
+    all_files = [os.path.join(chemin_datasets, f) for f in os.listdir(chemin_datasets) if f.endswith('.csv')]
+    df_final = pd.concat([pd.read_csv(file) for file in all_files])
+    df_final.to_csv(chemin_results + csv_final, index=False)
 
 if __name__ == "__main__":
     start_time = time.time()

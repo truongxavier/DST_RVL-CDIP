@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ from PIL import Image
 import shutil
 
 # Chemins des fichiers et répertoires
-csv_final = 'final_processed_data.csv'
+csv_final = 'final_processed_data_rapide.csv'
 chemin_images = '/mnt/d/DVPT/projet/images/'
 chemin_images_resized = '/mnt/d/DVPT/projet/images_resized/'
 chemin_datasets = '/mnt/d/DVPT/projet/datasets/'
