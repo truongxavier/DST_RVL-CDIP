@@ -37,10 +37,28 @@ def serialize_image(image):
 def image_to_list(image):
     return image.flatten().tolist()
 
+def calculate_entropy(image):
+    try:
+        if image is None or image.size == 0:
+            return None
+        hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+        hist = hist.flatten()
+        hist = hist / hist.sum()  # Normalize the histogram
+        entropy = -np.sum(hist * np.log2(hist + 1e-7))  # Calculate entropy
+        return entropy
+    except Exception as e:
+        logging.error(f"Error calculating entropy: {e}")
+        return None
+
 async def process_batch_async(batch):
     batch['image'] = await asyncio.gather(*[read_image_async(path) for path in batch['image_chemin']])
-    batch['width'] = [img.shape[1] if img is not None else None for img in batch['image']]
-    batch['height'] = [img.shape[0] if img is not None else None for img in batch['image']]
+    batch['width'] = batch['image'].apply(lambda x: x.shape[1] if x is not None else None)
+    batch['height'] = batch['image'].apply(lambda x: x.shape[0] if x is not None else None)
+    batch['dpi'] = batch['image'].apply(lambda x: Image.fromarray(x).info.get('dpi') if x is not None else None)
+    batch['blur'] = batch['image'].apply(lambda x: cv2.Laplacian(x, cv2.CV_64F).var() if x is not None else None)
+    batch['brightness'] = batch['image'].apply(lambda x: np.mean(x) if x is not None else None)
+    batch['contrast'] = batch['image'].apply(lambda x: np.std(x) if x is not None else None)
+    batch['entropy'] = batch['image'].apply(lambda x: calculate_entropy(x) if x is not None else None)
     batch.drop('image', axis=1, inplace=True)  # Remove the 'image' column
     return batch
 
@@ -78,7 +96,15 @@ def main():
         def update_pbar(future):
             pbar.update()
 
-        futures = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'width': 'int64', 'height': 'int64'}).to_delayed()
+        futures = df.map_partitions(process_batch, meta={'image_chemin': 'object',
+                                                         'label': 'int64',
+                                                         'width': 'int64',
+                                                         'height': 'int64',
+                                                         'dpi': 'int64',
+                                                         'blur': 'float64',
+                                                         'brightness': 'float64',
+                                                         'contrast': 'float64',
+                                                         'entropy': 'float64'}).to_delayed()
         with ThreadPoolExecutor(max_workers=16) as executor:
             for i, future in enumerate(futures):
                 future.add_done_callback(update_pbar)
@@ -96,7 +122,11 @@ def main():
     logging.info("Lecture des fichiers CSV intermédiaires")
     all_files = [os.path.join(chemin_datasets, f) for f in os.listdir(chemin_datasets) if f.startswith('processed_batch_')]
     df_final = dd.concat([dd.read_csv(file) for file in all_files])
-    df_final.to_csv(chemin_results + 'final_processed_data.csv', index=False)
+    df_final.to_csv(chemin_results + 'final_processed_data_rapide.csv', index=False)
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    processing_time = end_time - start_time
+    print(f"Temps de traitement total : {round(processing_time, 2)} secondes")

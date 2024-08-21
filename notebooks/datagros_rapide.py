@@ -117,4 +117,8 @@ def main():
     df_final = pd.concat([pd.read_csv(file) for file in all_files])
     df_final.to_csv(chemin_results + csv_final, index=False)
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    processing_time = end_time - start_time
+    print(f"Temps de traitement total : {round(processing_time, 2)} secondes")
