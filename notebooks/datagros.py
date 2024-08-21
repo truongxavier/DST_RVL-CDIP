@@ -9,6 +9,7 @@ import logging
 import ipywidgets as widgets
 import numpy as np
 import base64
+import pickle
 
 def main():
     # Configurer les logs détaillés
@@ -47,6 +48,9 @@ def main():
         _, buffer = cv2.imencode('.png', image)
         return base64.b64encode(buffer).decode('utf-8')
 
+    def image_to_list(image):
+        return image.flatten().tolist()
+
     def process_batch(batch):
         batch['image'] = batch['image_chemin'].apply(read_image)
         batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None)
@@ -76,8 +80,9 @@ def main():
             result = dd.compute(future)[0]
             end_time = time.time()
             processing_time = end_time - start_time
-            result['image'] = result['image'].apply(lambda x: x if x is not None else np.zeros((1, 1)))
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
+            # with open(chemin_datasets + f'processed_batch_{i}.pkl', 'wb') as f:
+            #     pickle.dump(result, f)
             logging.info(f"Batch {i} traité et sauvegardé. Temps de traitement : {round(processing_time,2)} secondes")
             estimated_remaining_time = round((processing_time * (df.npartitions - i - 1)) / 60, 2)
             logging.info(f"Temps de traitement restant estimé : {estimated_remaining_time} minutes")
