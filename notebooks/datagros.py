@@ -9,7 +9,6 @@ import logging
 import ipywidgets as widgets
 import numpy as np
 import base64
-import pickle
 
 def main():
     # Configurer les logs détaillés
@@ -24,10 +23,10 @@ def main():
     cluster = LocalCluster(n_workers=12, threads_per_worker=2, memory_limit='8GB', dashboard_address=':8788')
     client = Client(cluster)
 
-    chemin_images = '/mnt/d/DVPT/DST/images/'
-    chemin_labels = '/mnt/d/DVPT/DST/labels/'
-    chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
-    chemin_results = '/mnt/d/DVPT/DST/results/'
+    chemin_images = '/mnt/d/DVPT/projet/images/'
+    chemin_labels = '/mnt/d/DVPT/projet/labels/'
+    chemin_datasets = '/mnt/d/DVPT/projet/datasets/'
+    chemin_results = '/mnt/d/DVPT/projet/results/'
 
     # Lire le fichier de labels en utilisant dask
     logging.info("Lecture du fichier de labels")
@@ -53,7 +52,9 @@ def main():
 
     def process_batch(batch):
         batch['image'] = batch['image_chemin'].apply(read_image)
-        batch['shape'] = batch['image'].apply(lambda x: x.shape if x is not None else None)
+        batch['width'] = batch['image'].apply(lambda x: x.shape[1] if x is not None else None)
+        batch['height'] = batch['image'].apply(lambda x: x.shape[0] if x is not None else None)
+        batch.drop('image', axis=1, inplace=True)  # Remove the 'image' column
         return batch
 
     # Repartitionner les données en paquets plus petits pour une meilleure parallélisation
@@ -73,7 +74,7 @@ def main():
         def update_pbar(future):
             pbar.update()
 
-        futures = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'image': 'object', 'shape': 'object'}).to_delayed()
+        futures = df.map_partitions(process_batch, meta={'image_chemin': 'object', 'label': 'int64', 'width': 'int64', 'height': 'int64'}).to_delayed()
         for i, future in enumerate(futures):
             future.add_done_callback(update_pbar)
             start_time = time.time()
@@ -81,8 +82,6 @@ def main():
             end_time = time.time()
             processing_time = end_time - start_time
             result.to_csv(chemin_datasets + f'processed_batch_{i}.csv', index=False)
-            # with open(chemin_datasets + f'processed_batch_{i}.pkl', 'wb') as f:
-            #     pickle.dump(result, f)
             logging.info(f"Batch {i} traité et sauvegardé. Temps de traitement : {round(processing_time,2)} secondes")
             estimated_remaining_time = round((processing_time * (df.npartitions - i - 1)) / 60, 2)
             logging.info(f"Temps de traitement restant estimé : {estimated_remaining_time} minutes")
@@ -102,7 +101,9 @@ def main():
     # Visualisation
     logging.info("Début de la visualisation")
     plt.figure(figsize=(8, 5))
-    plt.imshow(df['image'].iloc[1], cmap='gray')
+    image_path = df['image_chemin'].iloc[1]
+    image = read_image(image_path)
+    plt.imshow(image, cmap='gray')
     plt.show()
 
     df['label'].value_counts().head(15).plot(kind='bar')
@@ -112,10 +113,10 @@ def main():
     plt.savefig('distribution_labels.png')
     plt.show()
 
-    df['shape'].value_counts().plot(kind='bar')
-    plt.xlabel('Shape')
+    df['width'].value_counts().plot(kind='bar')
+    plt.xlabel('width')
     plt.ylabel('Count')
-    plt.title('Distribution of Shapes')
+    plt.title('Distribution of width')
     plt.show()
 
 if __name__ == '__main__':
