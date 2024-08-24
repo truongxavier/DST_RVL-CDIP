@@ -13,7 +13,6 @@ from PIL import Image, UnidentifiedImageError
 import time
 import asyncio
 import aiofiles
-import aiohttp
 
 async def read_image_async(image_path):
     if not os.path.exists(image_path):
@@ -59,7 +58,6 @@ async def process_batch_async(batch):
     batch['brightness'] = batch['image'].apply(lambda x: np.mean(x) if x is not None else None)
     batch['contrast'] = batch['image'].apply(lambda x: np.std(x) if x is not None else None)
     batch['entropy'] = batch['image'].apply(lambda x: calculate_entropy(x) if x is not None else None)
-    batch['orientation'] = batch['image'].apply(lambda x: get_orientation(x) if x is not None else None)  # Add orientation column
     batch.drop('image', axis=1, inplace=True)  # Remove the 'image' column
     return batch
 
