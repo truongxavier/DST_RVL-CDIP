@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import logging
-import h5py
+#import h5py
 import cv2
 import base64
 import dask.dataframe as dd
@@ -14,10 +14,11 @@ import time
 import asyncio
 import aiofiles
 from scipy.ndimage import generic_filter
-import pytesseract
+#import pytesseract
+import io
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Niveau de logging (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    level=logging.INFO,  # Niveau de logging (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Format du message de logging
     handlers=[
         logging.FileHandler("datagros_plusrapide.log"),  # Enregistrer les logs dans un fichier
@@ -90,11 +91,36 @@ def calculate_mean_luminance(image):
 #         logging.error(f"Error performing OCR: {e}")
 #         return None
 
+async def calculate_dpi_async(image_path):
+    try:
+        async with aiofiles.open(image_path, 'rb') as f:
+            # Lire le fichier en mémoire
+            image_data = await f.read()
+            # Ouvrir l'image de manière synchrone
+            with Image.open(io.BytesIO(image_data)) as img:
+                dpi = img.info.get('dpi', (0, 0))
+                dpi = (float(dpi[0]), float(dpi[1]))  # Convert to float
+                return dpi[0]
+    except Exception as e:
+        logging.error(f"Error calculating DPI: {e}")
+        return None
+
+def calculate_pixel_count(image):
+    try:
+        if image is None or image.size == 0:
+            return None
+        return image.size
+    except Exception as e:
+        logging.error(f"Error calculating pixel count: {e}")
+        return None
+
+
 async def process_batch_async(batch):
     batch['image'] = await asyncio.gather(*[read_image_async(chemin_images + path) for path in batch['image_chemin']])
     batch['width'] = batch['image'].apply(lambda x: x.shape[1] if x is not None else None)
     batch['height'] = batch['image'].apply(lambda x: x.shape[0] if x is not None else None)
-    batch['dpi'] = batch['image'].apply(lambda x: Image.fromarray(x).info.get('dpi') if x is not None else None)
+    dpi_results = await asyncio.gather(*[calculate_dpi_async(chemin_images + path) for path in batch['image_chemin']])
+    batch['dpi'] = dpi_results
     batch['blur'] = batch['image'].apply(lambda x: cv2.Laplacian(x, cv2.CV_64F).var() if x is not None else None)
     batch['brightness'] = batch['image'].apply(lambda x: np.mean(x) if x is not None else None)
     batch['contrast'] = batch['image'].apply(lambda x: np.std(x) if x is not None else None)
@@ -102,6 +128,7 @@ async def process_batch_async(batch):
     batch['mean_luminance'] = batch['image'].apply(lambda x: calculate_mean_luminance(x) if x is not None else None)
     #batch['mean_local_var'] = batch['image'].apply(lambda x: calculate_mean_local_variance(x) if x is not None else None)
     #batch['ocr_text'] = batch['image'].apply(lambda x: perform_ocr(x) if x is not None else None)
+    batch['pixel_count'] = batch['image'].apply(lambda x: calculate_pixel_count(x) if x is not None else None)
     batch.drop('image', axis=1, inplace=True)  # Remove the 'image' column
     return batch
 
@@ -142,7 +169,8 @@ def main():
                 'brightness': 'float64',
                 'contrast': 'float64',
                 'entropy': 'float64',
-                'mean_luminance': 'float64'
+                'mean_luminance': 'float64',
+                'pixel_count': 'int64'
                 #'ocr_text': 'object'
                 #'mean_local_var': 'float64'
                 }
