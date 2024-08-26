@@ -9,7 +9,7 @@ import pytesseract
 
 chemin_images = '/mnt/d/DVPT/DST/images/'
 chemin_labels = '/mnt/d//DVPT/DST/labels/'
-df = pd.read_csv(chemin_labels+'testmini.txt', sep=' ')
+df = pd.read_csv(chemin_labels+'test.txt', sep=' ')
 df.columns = ['image_chemin', 'label']
 df['image_chemin'] = chemin_images + df['image_chemin']
 def read_image(file_path):
@@ -32,6 +32,7 @@ plt.xlabel('Label')
 plt.ylabel('Count')
 plt.title('Distribution of Labels')
 plt.show()
+plt.savfig('distribution_labels.png')
 
 df['shape'].value_counts().plot(kind='bar')
 plt.xlabel('Shape')

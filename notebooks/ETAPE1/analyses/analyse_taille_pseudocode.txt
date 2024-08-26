@@ -1,0 +1,58 @@
+Pseudocode du Pipeline de Traitement d'Images et d'OCR
+
+1. Initialiser les chemins et les répertoires :
+   - Définir chemin_images, chemin_images_resized, chemin_datasets, chemin_results, et csv_final.
+   - Créer le répertoire chemin_images_resized s'il n'existe pas.
+
+2. Charger les données :
+   - Lire le fichier CSV final (csv_final) dans un DataFrame (df).
+
+3. Visualiser un échantillon d'images :
+   - Fonction visualize_images(df, num_images=10) :
+      - Sélectionner aléatoirement num_images images du DataFrame.
+      - Pour chaque image sélectionnée :
+         - Charger l'image en niveaux de gris.
+         - Afficher l'image avec son label.
+
+4. Étudier la distribution des largeurs et hauteurs des images :
+   - Fonction study_width_distribution(df) :
+      - Créer un histogramme des largeurs d'images présentes dans le DataFrame.
+   - Fonction study_height_distribution(df) :
+      - Créer un histogramme des hauteurs d'images présentes dans le DataFrame.
+
+5. Redimensionner les images :
+   - Fonction resize_images(df, sizes=[(1000, 1000), (1500, 1500), ...], sample_size=50) :
+      - Sélectionner un échantillon aléatoire de sample_size images.
+      - Pour chaque taille spécifiée dans sizes :
+         - Créer un répertoire pour les images redimensionnées à cette taille.
+         - Pour chaque image de l'échantillon :
+            - Copier l'image originale si elle n'a pas encore été copiée.
+            - Si l'image redimensionnée existe déjà, passer à la suivante.
+            - Sinon, redimensionner l'image à la taille spécifiée et l'enregistrer.
+      - Retourner les chemins des images redimensionnées pour chaque taille.
+
+6. Effectuer l'OCR sur les images redimensionnées :
+   - Fonction perform_ocr(resized_image_paths) :
+      - Pour chaque taille d'image :
+         - Pour chaque image de cette taille :
+            - Charger l'image en niveaux de gris.
+            - Appliquer l'OCR pour extraire le texte et la confiance de l'OCR.
+            - Extraire les informations DPI de l'image.
+            - Enregistrer les résultats de l'OCR (texte, confiance, DPI).
+
+7. Évaluer les résultats de l'OCR :
+   - Fonction evaluate_ocr_results(ocr_results) :
+      - Pour chaque taille d'image :
+         - Calculer et afficher les statistiques suivantes :
+            - Longueur moyenne du texte OCR.
+            - Nombre moyen de mots.
+            - Nombre moyen de caractères alphanumériques.
+            - Confiance moyenne de l'OCR.
+            - DPI moyen des images.
+
+8. Exécution principale du script :
+   - Visualiser un échantillon d'images.
+   - Étudier les distributions de largeur et hauteur des images.
+   - Redimensionner les images et enregistrer les chemins des images redimensionnées.
+   - Effectuer l'OCR sur les images redimensionnées.
+   - Évaluer les résultats de l'OCR pour chaque taille d'image.
