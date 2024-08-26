@@ -11,17 +11,13 @@ from tqdm import tqdm
 from dask.distributed import Client, LocalCluster
 from PIL import Image, UnidentifiedImageError
 import time
-import asyncio
-import aiofiles
 
-async def read_image_async(image_path):
+def read_image(image_path):
     if not os.path.exists(image_path):
         logging.warning(f"File not found: {image_path}")
         return np.zeros((1, 1))  # Retourne une image vide si le fichier n'existe pas
     try:
-        async with aiofiles.open(image_path, 'rb') as f:
-            image_data = await f.read()
-        image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if image is None:
             raise FileNotFoundError
         return image
@@ -49,8 +45,8 @@ def calculate_entropy(image):
         logging.error(f"Error calculating entropy: {e}")
         return None
 
-async def process_batch_async(batch):
-    batch['image'] = await asyncio.gather(*[read_image_async(path) for path in batch['image_chemin']])
+def process_batch(batch):
+    batch['image'] = batch['image_chemin'].apply(read_image)
     batch['width'] = batch['image'].apply(lambda x: x.shape[1] if x is not None else None)
     batch['height'] = batch['image'].apply(lambda x: x.shape[0] if x is not None else None)
     batch['dpi'] = batch['image'].apply(lambda x: Image.fromarray(x).info.get('dpi') if x is not None else None)
@@ -60,9 +56,6 @@ async def process_batch_async(batch):
     batch['entropy'] = batch['image'].apply(lambda x: calculate_entropy(x) if x is not None else None)
     batch.drop('image', axis=1, inplace=True)  # Remove the 'image' column
     return batch
-
-def process_batch(batch):
-    return asyncio.run(process_batch_async(batch))
 
 def main():
     # Configurer Dask pour utiliser un cluster local avec plus de ressources
@@ -85,7 +78,7 @@ def main():
     total_rows = df.shape[0].compute()
     logging.info(f"Nombre total de lignes : {total_rows}")
     # Calculer le nombre de partitions nécessaires pour avoir 1000 lignes par partition
-    npartitions = (total_rows // 1000) + (1 if total_rows % 1000 != 0 else 0)
+    npartitions = (total_rows // 10) + (1 if total_rows % 10 != 0 else 0)
     logging.info(f"Nombre de partitions : {npartitions}")
     # Repartitionner le DataFrame
     df = df.repartition(npartitions=npartitions)
@@ -123,10 +116,9 @@ def main():
     all_files = [os.path.join(chemin_datasets, f) for f in os.listdir(chemin_datasets) if f.endswith('.csv')]
     df_final = pd.concat([pd.read_csv(file) for file in all_files])
     df_final.to_csv(chemin_results + csv_final, index=False)
-
 if __name__ == "__main__":
     start_time = time.time()
     main()
     end_time = time.time()
     processing_time = end_time - start_time
-    print(f"Temps de traitement total : {round(processing_time / 60, 2)} minutes")
+    print(f"Temps de traitement total : {round(processing_time, 2)} secondes")
