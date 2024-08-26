@@ -71,18 +71,24 @@ def calculate_mean_luminance(image):
     gray_array = np.array(image)
     return np.mean(gray_array)
 
-def calculate_mean_local_variance(image):
-    return generic_filter(image, np.var, size=3).mean()
+# def local_variance(arr):
+#     return arr.var()
 
-def perform_ocr(image):
-    try:
-        if image is None or image.size == 0:
-            return None
-        text = pytesseract.image_to_string(image)
-        return text
-    except Exception as e:
-        logging.error(f"Error performing OCR: {e}")
-        return None
+# def calculate_mean_local_variance(image):
+#     gray_array = np.array(image)
+#     local_var = generic_filter(gray_array, local_variance, size=3)
+#     mean_local_var = np.mean(local_var)
+#     return mean_local_var
+
+# def perform_ocr(image):
+#     try:
+#         if image is None or image.size == 0:
+#             return None
+#         text = pytesseract.image_to_string(image)
+#         return text
+#     except Exception as e:
+#         logging.error(f"Error performing OCR: {e}")
+#         return None
 
 async def process_batch_async(batch):
     batch['image'] = await asyncio.gather(*[read_image_async(chemin_images + path) for path in batch['image_chemin']])
@@ -136,7 +142,6 @@ def main():
                 'brightness': 'float64',
                 'contrast': 'float64',
                 'entropy': 'float64',
-                'mean_luminance': 'float64',
                 'mean_luminance': 'float64'
                 #'ocr_text': 'object'
                 #'mean_local_var': 'float64'
