@@ -10,6 +10,17 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image, UnidentifiedImageError
 import gc
 
+chemin_images = '/mnt/d/DVPT/DST/images/'
+chemin_labels = '/mnt/d/DVPT/DST/labels/'
+chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
+chemin_results = '/mnt/d/DVPT/DST/results/'
+
+csv_final = 'final_processed_data_'
+origin_file_name = 'train'
+
+TARGET_WIDTH = 2000
+TARGET_HEIGHT = 1000
+
 
 def collate_fn(batch):
     batch = list(filter(lambda x: x[0] is not None, batch))
@@ -27,13 +38,7 @@ def main():
     cluster = LocalCluster(n_workers=20, threads_per_worker=4, memory_limit='8GB', dashboard_address=':8788')
     client = Client(cluster)
 
-    chemin_images = '/mnt/d/DVPT/DST/images/'
-    chemin_labels = '/mnt/d/DVPT/DST/labels/'
-    chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
-    chemin_results = '/mnt/d/DVPT/DST/results/'
 
-    TARGET_WIDTH = 2000
-    TARGET_HEIGHT = 1000
 
     class ImageDataset(Dataset):
         def __init__(self, csv_file, root_dir, image_size=None):
