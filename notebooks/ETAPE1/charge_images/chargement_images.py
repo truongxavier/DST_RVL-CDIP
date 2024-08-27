@@ -131,13 +131,13 @@ def main():
 
     # Créer le dataset et le dataloader sans transformation
     dataset = ImageDataset(csv_file=chemin_labels + origin_file_name + '.txt', root_dir=chemin_images) #, image_size=(TARGET_WIDTH, TARGET_HEIGHT))
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=6, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=6, collate_fn=collate_fn)
 
 
     # Exemple de traitement des images par plus petits lots
     futures = []
-    batch_size = 16  # Taille des plus petits lots
-    max_futures = 10  # Limiter le nombre de futures en attente
+    batch_size = 10  # Taille des plus petits lots
+    max_futures = 8  # Limiter le nombre de futures en attente
     semaphore = Semaphore(max_futures)
     file_counter = 0
     file_lock = Lock()  # Verrou pour les accès aux fichiers
