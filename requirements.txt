@@ -74,10 +74,12 @@ psutil==6.0.0
 ptyprocess==0.7.0
 pure_eval==0.2.3
 py-cpuinfo==9.0.0
+py4j==0.10.9.7
 pyarrow==17.0.0
 pyarrow-hotfix==0.6
 Pygments==2.18.0
 pyparsing==3.1.2
+pyspark==3.5.2
 pytesseract==0.3.13
 python-dateutil==2.9.0.post0
 pytz==2024.1
