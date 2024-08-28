@@ -1,3 +1,4 @@
+#le traitement focntionne, mais sature la mémoire
 import os
 import h5py
 import pandas as pd
@@ -46,7 +47,7 @@ for index, row in tqdm(labels_df.iterrows(), total=total_images, desc="Traitemen
     images_remaining = total_images - images_processed
     time_per_image = elapsed_time / images_processed
     estimated_time_remaining = time_per_image * images_remaining
-    tqdm.write(f"Images traitées: {images_processed}/{total_images}, Temps restant estimé: {estimated_time_remaining:.2f} secondes")
+    #tqdm.write(f"Images traitées: {images_processed}/{total_images}, Temps restant estimé: {estimated_time_remaining:.2f} secondes")
 
 # Créer un DataFrame Pandas
 df = pd.DataFrame(data, columns=['image_name', 'image_data', 'label'])
