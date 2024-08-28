@@ -4,10 +4,14 @@ import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, BinaryType
 from PIL import Image
+from tqdm import tqdm
+import time
 
-# Initialiser une session Spark
+# Initialiser une session Spark avec des options supplémentaires
 spark = SparkSession.builder \
     .appName("ImageLoader") \
+    .config("spark.executor.memory", "2g") \
+    .config("spark.driver.memory", "2g") \
     .getOrCreate()
 
 # Chemins des fichiers
@@ -24,7 +28,10 @@ labels_df = pd.read_csv(csv_file, sep=" ", header=None, names=['image_name', 'la
 
 # Lire les images et extraire les données
 data = []
-for index, row in labels_df.iterrows():
+total_images = len(labels_df)
+start_time = time.time()
+
+for index, row in tqdm(labels_df.iterrows(), total=total_images, desc="Traitement des images"):
     img_path = os.path.join(chemin_images, row['image_name'])
     try:
         with Image.open(img_path) as img:
@@ -32,6 +39,14 @@ for index, row in labels_df.iterrows():
             data.append((row['image_name'], image_data, row['label']))
     except Exception as e:
         print(f"Error loading image {img_path}: {e}")
+
+    # Calculer le temps restant estimé
+    elapsed_time = time.time() - start_time
+    images_processed = index + 1
+    images_remaining = total_images - images_processed
+    time_per_image = elapsed_time / images_processed
+    estimated_time_remaining = time_per_image * images_remaining
+    tqdm.write(f"Images traitées: {images_processed}/{total_images}, Temps restant estimé: {estimated_time_remaining:.2f} secondes")
 
 # Créer un DataFrame Pandas
 df = pd.DataFrame(data, columns=['image_name', 'image_data', 'label'])
