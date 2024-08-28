@@ -10,16 +10,13 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image, UnidentifiedImageError
 import gc
 
-chemin_images = '/mnt/d/DVPT/DST/images/'
-chemin_labels = '/mnt/d/DVPT/DST/labels/'
-chemin_datasets = '/mnt/d/DVPT/DST/datasets/'
-chemin_results = '/mnt/d/DVPT/DST/results/'
+chemin_images = '/mnt/d/DVPT/projet/images/'
+chemin_labels = '/mnt/d/DVPT/projet/labels/'
+chemin_datasets = '/mnt/d/DVPT/projet/datasets/'
+chemin_results = '/mnt/d/DVPT/projet/results/'
 
 csv_final = 'final_processed_data_'
 origin_file_name = 'train'
-
-TARGET_WIDTH = 2000
-TARGET_HEIGHT = 1000
 
 
 def collate_fn(batch):
@@ -35,7 +32,7 @@ def process_batch(images, batch_labels, dataset):
 
 def main():
     # Configurer Dask pour utiliser un cluster local avec plus de ressources
-    cluster = LocalCluster(n_workers=20, threads_per_worker=4, memory_limit='8GB', dashboard_address=':8788')
+    cluster = LocalCluster(n_workers=3, threads_per_worker=1, memory_limit='2GB', dashboard_address=':8788')
     client = Client(cluster)
 
 
@@ -44,7 +41,6 @@ def main():
         def __init__(self, csv_file, root_dir, image_size=None):
             self.labels_df = pd.read_csv(csv_file, sep=" ", header=None)
             self.root_dir = root_dir
-            self.image_size = image_size
 
         def __len__(self):
             return len(self.labels_df)
@@ -53,8 +49,6 @@ def main():
             img_name = os.path.join(self.root_dir, self.labels_df.iloc[idx, 0])
             try:
                 image = Image.open(img_name)
-                if self.image_size:
-                    image = self.resize_image(image)  # Redimensionner l'image
                 image = np.array(image)  # Convertir l'image en tableau numpy
             except UnidentifiedImageError:
                 logging.info(f"Cannot identify image file {img_name}. Skipping.")
@@ -62,24 +56,18 @@ def main():
             label = self.labels_df.iloc[idx, 1]
             return image, label
 
-        def resize_image(self, image):
-            # Redimensionne l'image tout en maintenant le rapport d'aspect
-            # en utilisant l'algorithme de rééchantillonnage Lanczos
-            image = image.resize((TARGET_WIDTH, TARGET_HEIGHT), Image.LANCZOS)
-            return image
-
     # Créer le dataset et le dataloader sans transformation
-    dataset = ImageDataset(csv_file=chemin_labels + 'test.txt', root_dir=chemin_images, image_size=(TARGET_WIDTH, TARGET_HEIGHT))
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=12, collate_fn=collate_fn)
+    dataset = ImageDataset(csv_file=chemin_labels + 'test.txt', root_dir=chemin_images)
+    dataloader = DataLoader(dataset, batch_size=100, shuffle=True, num_workers=3, collate_fn=collate_fn)
 
     # Créer un fichier de sortie initial
-    output_file = chemin_results + 'processed_data_test_with_images.h5'
+    output_file = chemin_results + 'charged_test_with_images.h5'
     with h5py.File(output_file, 'w') as h5file:
         h5file.create_group('data')
 
     # Exemple de traitement des images par plus petits lots
-    futures = []
-    batch_size = 8  # Taille des plus petits lots
+    futures = [3]
+    batch_size = 100  # Taille des plus petits lots
     with ThreadPoolExecutor() as executor:
         for images, batch_labels in tqdm(dataloader, desc="Processing Batches"):
             if len(images) == 0:

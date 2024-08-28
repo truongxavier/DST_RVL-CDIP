@@ -98,14 +98,13 @@ def process_batch(images, batch_labels):
 
 def main():
     # Configurer Dask pour utiliser un cluster local avec plus de ressources
-    cluster = LocalCluster(n_workers=20, threads_per_worker=4, memory_limit='6GB', dashboard_address=':8788')
+    cluster = LocalCluster(n_workers=2, threads_per_worker=1, memory_limit='1000MB', dashboard_address=':8788')
     client = Client(cluster)
 
     class ImageDataset(Dataset):
         def __init__(self, csv_file, root_dir, image_size=None):
             self.labels_df = pd.read_csv(csv_file, sep=" ", header=None)
             self.root_dir = root_dir
-            self.image_size = image_size
 
         def __len__(self):
             return len(self.labels_df)
@@ -113,10 +112,10 @@ def main():
         def __getitem__(self, idx):
             img_name = os.path.join(self.root_dir, self.labels_df.iloc[idx, 0])
             try:
-                image = Image.open(img_name)
-                # if self.image_size:
-                #     image = self.resize_image(image)  # Redimensionner l'image
-                image = np.array(image)  # Convertir l'image en tableau numpy
+                with Image.open(img_name) as image:
+                    # if self.image_size:
+                    #     image = self.resize_image(image)  # Redimensionner l'image
+                    image = np.array(image) # Convertir l'image en tableau numpy
             except UnidentifiedImageError:
                 logging.info(f"Cannot identify image file {img_name}. Skipping.")
                 return None, None
@@ -131,18 +130,18 @@ def main():
 
     # Créer le dataset et le dataloader sans transformation
     dataset = ImageDataset(csv_file=chemin_labels + origin_file_name + '.txt', root_dir=chemin_images) #, image_size=(TARGET_WIDTH, TARGET_HEIGHT))
-    dataloader = DataLoader(dataset, batch_size=10, shuffle=True, num_workers=6, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=2, collate_fn=collate_fn, pin_memory=True)
 
 
     # Exemple de traitement des images par plus petits lots
     futures = []
-    batch_size = 10  # Taille des plus petits lots
-    max_futures = 8  # Limiter le nombre de futures en attente
+    batch_size = 5  # Taille des plus petits lots
+    max_futures = 2  # Limiter le nombre de futures en attente
     semaphore = Semaphore(max_futures)
     file_counter = 0
     file_lock = Lock()  # Verrou pour les accès aux fichiers
 
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    with ThreadPoolExecutor(max_workers=max_futures) as executor:
         total_batches = len(dataloader)
         with tqdm(total=total_batches, desc="Processing Batches") as pbar:
             for images, batch_labels in dataloader:
@@ -164,21 +163,21 @@ def main():
                             with tempfile.NamedTemporaryFile(delete=False, suffix='.h5', dir=chemin_datasets) as temp_file:
                                 intermediate_file = temp_file.name
 
-                            with file_lock:  # Utiliser un verrou pour garantir un accès exclusif
-                                logging.info(f"Opening file {intermediate_file} for writing")
-                                with h5py.File(intermediate_file, 'w') as h5file:
-                                    data_group = h5file.create_group('data')
-                                    for j, (image, label) in enumerate(zip(batch_images, batch_labels)):
-                                        img_dataset_name = f'image_{j}'
-                                        data_group.create_dataset(img_dataset_name, data=image)
-                                        data_group[img_dataset_name].attrs['label'] = label
-                                logging.info(f"Closed file {intermediate_file} after writing")
+                                with file_lock:  # Utiliser un verrou pour garantir un accès exclusif
+                                    #logging.info(f"Opening file {intermediate_file} for writing")
+                                    with h5py.File(intermediate_file, 'w') as h5file:
+                                        data_group = h5file.create_group('data')
+                                        for j, (image, label) in enumerate(zip(batch_images, batch_labels)):
+                                            img_dataset_name = f'image_{j}'
+                                            data_group.create_dataset(img_dataset_name, data=image)
+                                            data_group[img_dataset_name].attrs['label'] = label
+                                    #logging.info(f"Closed file {intermediate_file} after writing")
 
                             # Log the image and label
-                            logging.info(f"Processed batch {file_counter} with {len(batch_images)} images")
+                            #logging.info(f"Processed batch {file_counter} with {len(batch_images)} images")
 
                             # Libérer la mémoire utilisée par les images traitées
-                            del batch_images
+                            del batch_images, batch_labels
                             gc.collect()
                             file_counter += 1
                         except Exception as e:
@@ -190,6 +189,7 @@ def main():
                 future.result()  # Assurez-vous que toutes les futures sont terminées
 
     # Libération des ressources et nettoyage de la mémoire
+    client.retire_workers()
     client.close()
     cluster.close()
     gc.collect()

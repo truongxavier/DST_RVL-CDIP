@@ -68,7 +68,7 @@ def study_height_distribution(df):
     plt.show()
 
 # Tester différentes tailles d'image et enregistrer les images redimensionnées
-def resize_images(df, sizes=[(1000, 1000), (1500, 1500), (2000, 2000), (2500, 2500)], sample_size=50):
+def resize_images(df, sizes=[(125, 125), (250, 250), (500, 500), (700, 700)], sample_size=50):
     sample_df = df.sample(sample_size)
     resized_image_paths = {}
     original_images_dir = os.path.join(chemin_images_resized, "originals")
