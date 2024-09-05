@@ -3,7 +3,7 @@ from datasets import load_from_disk
 import matplotlib.pyplot as plt
 
 # Chemin pour charger les datasets
-results_dir = '/mnt/d/DVPT/projet/results/'
+results_dir = '/mnt/d/DVPT/projet/data/'
 
 # Charger les datasets enregistrés
 train_dataset = load_from_disk(os.path.join(results_dir, 'train_dataset'))
